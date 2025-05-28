@@ -49,7 +49,7 @@ public class AuthController {
     public String dashboard(Authentication auth, Model model) {
         if (auth.getPrincipal() instanceof OAuth2User oauthUser) {
             userService.processOAuthPostLogin(oauthUser);
-            model.addAttribute("name",  oauthUser.getAttribute("name"));
+            model.addAttribute("username",  oauthUser.getAttribute("username"));
             model.addAttribute("email", oauthUser.getAttribute("email"));
         }
         else if (auth.getPrincipal() instanceof UserDetails ud) {
@@ -58,7 +58,7 @@ public class AuthController {
                     .orElseThrow(() ->
                             new UsernameNotFoundException("No user with email: " + email)
                     );
-            model.addAttribute("name",  user.getUsername());
+            model.addAttribute("username",  user.getUsername());
             model.addAttribute("email", email);
 
         }
