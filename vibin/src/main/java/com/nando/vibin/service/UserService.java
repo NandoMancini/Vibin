@@ -35,8 +35,9 @@ public class UserService {
         if (user == null) {
             user = new User();
             user.setEmail(email);
-            user.setUsername(oAuth2User.getAttribute("username"));
+            user.setUsername(oAuth2User.getAttribute("name"));
             user.setAuthProvider(User.AuthProvider.GOOGLE);
+            System.console().printf(user.toString());
             userRepository.save(user);
         }
     }
