@@ -14,7 +14,6 @@ import lombok.Setter;
 @Getter
 @Entity
 @Table(name = "users")
-
 public class User {
 
     @Id
@@ -24,11 +23,11 @@ public class User {
     private String username;
     private String email;
     private String password;
+
     @Enumerated(EnumType.STRING)
     private AuthProvider authProvider;
 
     public enum AuthProvider {
         LOCAL, GOOGLE
     }
-
 }

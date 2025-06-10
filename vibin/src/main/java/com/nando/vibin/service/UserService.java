@@ -1,7 +1,5 @@
 package com.nando.vibin.service;
 
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -16,29 +14,35 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void registerUser(User user) {
+    public User registerUser(User user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setAuthProvider(User.AuthProvider.LOCAL);
-        userRepository.save(user);
+        return userRepository.save(user);
     }
 
-    @Transactional
-    public void processOAuthPostLogin(OAuth2User oAuth2User) {
-        String email = oAuth2User.getAttribute("email");
-        User user = userRepository.findByEmail(email).orElse(null);
 
-        if (user == null) {
-            user = new User();
+    @Transactional
+    public User processOAuthPostLogin(OAuth2User oAuth2User) {
+        String email = oAuth2User.getAttribute("email");
+        User existing = userRepository.findByEmail(email).orElse(null);
+
+        if (existing == null) {
+            User user = new User();
             user.setEmail(email);
-            user.setUsername(oAuth2User.getAttribute("name"));
+            user.setUsername(oAuth2User.getAttribute("name")); // use “name” from Google
             user.setAuthProvider(User.AuthProvider.GOOGLE);
-            System.console().printf(user.toString());
-            userRepository.save(user);
+            // Note: no password for GOOGLE accounts
+            return userRepository.save(user);
         }
+
+        return existing;
     }
 }

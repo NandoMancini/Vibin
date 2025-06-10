@@ -1,54 +1,78 @@
 package com.nando.vibin.config;
 
+import com.nando.vibin.filter.JwtAuthFilter;
+import com.nando.vibin.service.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.nando.vibin.service.CustomUserDetailsService;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
+    private final JwtService jwtService;
 
-    public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
+    public SecurityConfig(CustomUserDetailsService customUserDetailsService, JwtService jwtService) {
         this.customUserDetailsService = customUserDetailsService;
+        this.jwtService = jwtService;
     }
 
     @Bean
+    public JwtAuthFilter jwtAuthFilter() {
+        return new JwtAuthFilter(jwtService, customUserDetailsService);
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/register", "/login", "/css/**", "/js/**").permitAll()
-                        .anyRequest().authenticated()
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .formLogin(form -> form
-                        .loginPage("/login")  // Custom login page for email/password
-                        .loginProcessingUrl("/login")  // Handles POST login requests
-                        .defaultSuccessUrl("/dashboard", true)  // Redirect after successful login
-                        .failureUrl("/login?error=true")  // Redirect on failure
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/oauth2/success",
+                                "/oauth2/**"  // allow Spring's OAuth2 callback URLs
+                        )
                         .permitAll()
+                        .anyRequest()
+                        .authenticated()
                 )
+                .httpBasic(Customizer.withDefaults())
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/login")  // Custom login page for OAuth 2.1 (same as regular login page)
-                        .defaultSuccessUrl("/dashboard",true)  // Redirect after successful OAuth login
-                        .failureUrl("/login?error=true")  // Redirect on OAuth failure
+                        .defaultSuccessUrl("/api/auth/oauth2/success", true)
+                        .failureUrl("/api/auth/login?error")
                 )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout=true")
-                        .permitAll()
-                )
-                .userDetailsService(customUserDetailsService);  // Custom user service for local login
+                .addFilterBefore(jwtAuthFilter(),
+                        org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
