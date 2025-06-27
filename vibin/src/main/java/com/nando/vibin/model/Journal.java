@@ -22,7 +22,9 @@ public class Journal {
     @Column(nullable = false)
     private Date date;
     private String title;
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String body;
+    private String emotion;
 
     @Column(name = "userId", nullable = false)
     private Long userId;
